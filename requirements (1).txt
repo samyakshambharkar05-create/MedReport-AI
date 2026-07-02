@@ -1,0 +1,11 @@
+streamlit>=1.38
+plotly
+matplotlib
+reportlab
+google-generativeai
+easyocr
+pdf2image
+transformers
+torch
+pandas
+Pillow>=10.1,<12.0
