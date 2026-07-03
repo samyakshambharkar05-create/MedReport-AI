@@ -1,3 +1,16 @@
+---
+title: MedReport AI
+emoji: 🏥
+colorFrom: blue
+colorTo: green
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
+# MedReport AI
+
+
 # 🩺 MedReport AI — Medical Report Analyzer
 
 An AI-powered web application that analyzes medical lab reports (PDFs or scanned images), extracts structured values, flags abnormal results, and explains them in plain language anyone can understand.
