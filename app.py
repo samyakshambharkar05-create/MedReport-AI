@@ -812,9 +812,9 @@ def render_analyze_page():
         # Key priority: Streamlit Secrets (cloud) → environment variable (Colab) → empty
         gemini_key = ""
         try:
-            gemini_key = st.secrets["GEMINI_API_KEY"]
+            gemini_key = st.secrets["api_key"]
         except Exception:
-            gemini_key = os.environ.get("GEMINI_API_KEY", "")
+            gemini_key = os.environ.get("api_key", "")
 
         extraction_method = "local"
 
