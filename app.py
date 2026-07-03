@@ -580,7 +580,8 @@ def extract_with_gemini(image_path, api_key):
     """
     try:
         import google.generativeai as genai
-        genai.configure(api_key=st.secrets["api_key"])
+        genai.configure(api_key=os.getenv("api_key"))
+       
 
         with open(image_path, "rb") as f:
             image_bytes = f.read()
