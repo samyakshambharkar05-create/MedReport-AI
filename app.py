@@ -776,13 +776,24 @@ def render_analyze_page():
                 html += f'<div class="step-row {cls}">{icon} {s}</div>'
             step_box.markdown(html, unsafe_allow_html=True)
 
+    try:
         render_steps(0)
         images = pdf_to_images("temp_upload.pdf")
+        st.success("✅ PDF converted successfully")
+
         images[0].save("temp_page.png")
+        st.success("✅ First page saved as image")
 
         render_steps(1)
         reader = load_ocr_reader()
+        st.success("✅ OCR model loaded")
+
         raw_text, avg_confidence, detections = run_ocr(reader, "temp_page.png")
+        st.success("✅ OCR completed")
+
+    except Exception as e:
+        st.exception(e)
+        st.stop()
 
         render_steps(2)
         ner_pipe = load_ner_pipeline()
