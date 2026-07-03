@@ -753,6 +753,9 @@ def render_analyze_page():
     st.markdown("<div style='margin-top:1.25rem;'></div>", unsafe_allow_html=True)
     st.markdown('<div class="upload-heading">Step 1 — Upload your report</div>', unsafe_allow_html=True)
     uploaded_file = st.file_uploader("Upload a lab report (PDF)", type=["pdf"], label_visibility="collapsed")
+    if uploaded_file is not None:
+        st.success(f"File received: {uploaded_file.name}")
+        st.write(f"Size: {uploaded_file.size} bytes")
 
     if uploaded_file is None:
         return
