@@ -301,10 +301,20 @@ def load_ner_pipeline():
 # ---------------------------------------------------------------------------
 def pdf_to_images(pdf_path):
     from pdf2image import convert_from_path
-    poppler_path = os.environ.get("POPPLER_PATH", None)
+
+    poppler_path = os.environ.get("POPPLER_PATH")
+
     if poppler_path:
-        return convert_from_path(pdf_path, dpi=200, poppler_path=poppler_path)
-    return convert_from_path(pdf_path, dpi=200)
+        return convert_from_path(
+            pdf_path,
+            dpi=120,
+            poppler_path=poppler_path
+        )
+    else:
+        return convert_from_path(
+            pdf_path,
+            dpi=120
+        )
 
 
 def run_ocr(reader, image_path):
@@ -732,17 +742,38 @@ def render_analyze_page():
     )
 
     # --- Feature row: gives the empty state some life instead of jumping straight to a bare upload box ---
+    # Initialize session state
     if "processed_file_signature" not in st.session_state:
-        st.markdown("<div style='margin-top:0.5rem;'></div>", unsafe_allow_html=True)
-        f1, f2, f3 = st.columns(3)
-        features = [
+            st.session_state.processed_file_signature = None
+
+    if "cached_explained" not in st.session_state:
+            st.session_state.cached_explained = []
+
+    if "cached_local_explained" not in st.session_state:
+            st.session_state.cached_local_explained = []
+
+    if "cached_raw_text" not in st.session_state:
+            st.session_state.cached_raw_text = ""
+
+    if "cached_avg_confidence" not in st.session_state:
+            st.session_state.cached_avg_confidence = 0
+
+    if "cached_filename" not in st.session_state:
+            st.session_state.cached_filename = ""
+
+    if "cached_extraction_method" not in st.session_state:
+            st.session_state.cached_extraction_method = "local"
+
+            st.markdown("<div style='margin-top:0.5rem;'></div>", unsafe_allow_html=True)
+            f1, f2, f3 = st.columns(3)
+            features = [
             (f1, "🔍", "OCR + AI extraction", "Reads PDFs and photos of lab reports using OCR and biomedical NLP."),
             (f2, "🚩", "Flags what matters", "Automatically highlights values outside the normal range."),
             (f3, "📈", "Tracks over time", "Save reports to see how your values trend across visits."),
         ]
-        for col, icon, title, desc in features:
-            with col:
-                st.markdown(f"""
+            for col, icon, title, desc in features:
+                with col:
+                    st.markdown(f"""
                 <div class="panel-box" style="text-align:left; min-height:118px;">
                     <div style="font-size:22px; margin-bottom:6px;">{icon}</div>
                     <div style="font-weight:600; font-size:14px; color:#2B2640; margin-bottom:3px;">{title}</div>
@@ -753,9 +784,7 @@ def render_analyze_page():
     st.markdown("<div style='margin-top:1.25rem;'></div>", unsafe_allow_html=True)
     st.markdown('<div class="upload-heading">Step 1 — Upload your report</div>', unsafe_allow_html=True)
     uploaded_file = st.file_uploader("Upload a lab report (PDF)", type=["pdf"], label_visibility="collapsed")
-    if uploaded_file is not None:
-        st.success(f"File received: {uploaded_file.name}")
-        st.write(f"Size: {uploaded_file.size} bytes")
+
 
     if uploaded_file is None:
         return
@@ -782,22 +811,27 @@ def render_analyze_page():
     try:
         render_steps(0)
         images = pdf_to_images("temp_upload.pdf")
-        st.success("✅ PDF converted successfully")
+        from PIL import Image
 
-        images[0].save("temp_page.png")
-        st.success("✅ First page saved as image")
+        img = images[0]
 
+        MAX_WIDTH = 1000
+
+        if img.width > MAX_WIDTH:
+            ratio = MAX_WIDTH / img.width
+            new_height = int(img.height * ratio)
+            img = img.resize((MAX_WIDTH, new_height))
+
+        img.save("temp_page.png")
         render_steps(1)
         reader = load_ocr_reader()
-        st.success("✅ OCR model loaded")
-
         raw_text, avg_confidence, detections = run_ocr(reader, "temp_page.png")
-        st.success("✅ OCR completed")
-
+        st.subheader("OCR Output")
+        st.text(raw_text)
     except Exception as e:
         st.exception(e)
         st.stop()
-
+        
         render_steps(2)
         ner_pipe = load_ner_pipeline()
 
@@ -805,6 +839,7 @@ def render_analyze_page():
         ner_results = ner_pipe(raw_text) if ner_pipe else []
         text_order_records = extract_with_hybrid(raw_text, ner_results)
         rows = group_into_rows(detections)
+        
         row_records = extract_by_row(rows)
         hybrid_records = merge_records(row_records, text_order_records)
 
@@ -854,11 +889,11 @@ def render_analyze_page():
         st.session_state.selected_param_idx = 0  # reset selection for the new report
 
     # --- Load from cache (instant on reruns triggered by chart/dropdown clicks) ---
-    explained = st.session_state.cached_explained
+    explained = st.session_state.get("cached_explained", [])
     local_explained = st.session_state.get("cached_local_explained", explained)
-    raw_text = st.session_state.cached_raw_text
-    avg_confidence = st.session_state.cached_avg_confidence
-    filename = st.session_state.cached_filename
+    raw_text = st.session_state.get("cached_raw_text", "")
+    avg_confidence = st.session_state.get("cached_avg_confidence", 0)
+    filename = st.session_state.get("cached_filename", "")
     extraction_method = st.session_state.get("cached_extraction_method", "local")
 
     if not explained:
